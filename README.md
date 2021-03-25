@@ -4,10 +4,7 @@ DCC (Dex-to-C Compiler) is method-based aot compiler that can translate DEX code
 ## 安装
 ### Linux
 以下是ubuntu 18.04 环境下的安装配置步骤,如果某些环节已经配置过,如JDK,可跳过.
-+ 下载代码
-```
-git clone https://github.com/amimo/dcc.git
-```
+
 + 安装项目依赖
 ```
 cd dcc
@@ -93,10 +90,6 @@ cd tests/demo-c
 ./gradlew assembleDebug
 ```
 如果一切顺利,"tests/demo-c/app/build/outputs/apk/debug/app-debug.apk"就是最终生成的apk,安装到手机并运行,看是否会崩溃.
-
-## 注意
-+ 这是我个人研究项目,当前还未经过大量测试,请谨慎用于线上项目!
-+ 编译出来的C代码使用JNI跟Java虚拟机交互,有可能会对性能产生非常严重的影响,请谨慎选择加固函数!
 
 ## 参考资源
 + [DAD](https://github.com/androguard/androguard/tree/master/androguard/decompiler/dad)

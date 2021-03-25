@@ -6,7 +6,8 @@ from builtins import object
 from androguard.core import androconf
 from androguard.util import read, get_certificate_name_string
 
-from androguard.core.bytecodes.axml import ARSCParser, AXMLPrinter, ARSCResTableConfig, AXMLParser, format_value, START_TAG, END_TAG, TEXT, END_DOCUMENT
+from androguard.core.bytecodes.axml import ARSCParser, AXMLPrinter, ARSCResTableConfig, AXMLParser, format_value, \
+    START_TAG, END_TAG, TEXT, END_DOCUMENT
 
 import io
 from zlib import crc32
@@ -66,17 +67,15 @@ def _dump_additional_attributes(additional_attributes):
     attr_id, = unpack('<I', attributes_raw.read(4))
     if attr_id != APK._APK_SIG_ATTR_V2_STRIPPING_PROTECTION:
         return attributes_hex
-        
+
     scheme_id, = unpack('<I', attributes_raw.read(4))
 
     return "stripping protection set, scheme %d" % scheme_id
 
 
 def _dump_digests_or_signatures(digests_or_sigs):
-
     infos = ""
-    for i,dos in enumerate(digests_or_sigs):
-
+    for i, dos in enumerate(digests_or_sigs):
         infos += "\n"
         infos += " [%d]\n" % i
         infos += "  - Signature Id : %s\n" % APK._APK_SIG_ALGO_IDS.get(dos[0], hex(dos[0]))
@@ -94,14 +93,13 @@ class APKV2SignedData(object):
     def __init__(self):
         self._bytes = None
         self.digests = None
-        self.certificates =  None
+        self.certificates = None
         self.additional_attributes = None
 
     def __str__(self):
-
         certs_infos = ""
 
-        for i,cert in enumerate(self.certificates):
+        for i, cert in enumerate(self.certificates):
             x509_cert = x509.Certificate.load(cert)
 
             certs_infos += "\n"
@@ -131,9 +129,8 @@ class APKV3SignedData(APKV2SignedData):
         super(APKV3SignedData, self).__init__()
         self.minSDK = None
         self.maxSDK = None
-    
-    def __str__(self):
 
+    def __str__(self):
         base_str = super(APKV3SignedData, self).__str__()
 
         # maxSDK is set to a negative value if there is no upper bound on the sdk targeted
@@ -144,7 +141,7 @@ class APKV3SignedData(APKV2SignedData):
         return "\n".join([
             'signer minSDK : {0:d}'.format(self.minSDK),
             'signer maxSDK : {0:s}'.format(max_sdk_str),
-            base_str    
+            base_str
         ])
 
 
@@ -180,7 +177,6 @@ class APKV3Signer(APKV2Signer):
         self.maxSDK = None
 
     def __str__(self):
-        
         base_str = super(APKV3Signer, self).__str__()
 
         # maxSDK is set to a negative value if there is no upper bound on the sdk targeted
@@ -191,7 +187,7 @@ class APKV3Signer(APKV2Signer):
         return "\n".join([
             'signer minSDK : {0:d}'.format(self.minSDK),
             'signer maxSDK : {0:s}'.format(max_sdk_str),
-            base_str    
+            base_str
         ])
 
 
@@ -207,13 +203,15 @@ class APK(object):
     _APK_SIG_ATTR_V2_STRIPPING_PROTECTION = 0xbeeff00d
 
     _APK_SIG_ALGO_IDS = {
-        0x0101 : "RSASSA-PSS with SHA2-256 digest, SHA2-256 MGF1, 32 bytes of salt, trailer: 0xbc",
-        0x0102 : "RSASSA-PSS with SHA2-512 digest, SHA2-512 MGF1, 64 bytes of salt, trailer: 0xbc",
-        0x0103 : "RSASSA-PKCS1-v1_5 with SHA2-256 digest.", # This is for build systems which require deterministic signatures.
-        0x0104 : "RSASSA-PKCS1-v1_5 with SHA2-512 digest.", # This is for build systems which require deterministic signatures.
-        0x0201 : "ECDSA with SHA2-256 digest",
-        0x0202 : "ECDSA with SHA2-512 digest",
-        0x0301 : "DSA with SHA2-256 digest",
+        0x0101: "RSASSA-PSS with SHA2-256 digest, SHA2-256 MGF1, 32 bytes of salt, trailer: 0xbc",
+        0x0102: "RSASSA-PSS with SHA2-512 digest, SHA2-512 MGF1, 64 bytes of salt, trailer: 0xbc",
+        0x0103: "RSASSA-PKCS1-v1_5 with SHA2-256 digest.",
+        # This is for build systems which require deterministic signatures.
+        0x0104: "RSASSA-PKCS1-v1_5 with SHA2-512 digest.",
+        # This is for build systems which require deterministic signatures.
+        0x0201: "ECDSA with SHA2-256 digest",
+        0x0202: "ECDSA with SHA2-512 digest",
+        0x0301: "DSA with SHA2-256 digest",
     }
 
     __no_magic = False
@@ -650,7 +648,8 @@ class APK(object):
             self.__no_magic = True
             log.warning("It looks like you have the magic python package installed but not the magic library itself!")
             log.warning("Error from magic library: %s", e)
-            log.warning("Please follow the installation instructions at https://github.com/ahupp/python-magic/#installation")
+            log.warning(
+                "Please follow the installation instructions at https://github.com/ahupp/python-magic/#installation")
             return default
 
         try:
@@ -894,7 +893,7 @@ class APK(object):
         return None
 
     def get_all_attribute_value(
-        self, tag_name, attribute, format_value=True, **attribute_filter
+            self, tag_name, attribute, format_value=True, **attribute_filter
     ):
         """
         Yields all the attribute values in xml files which match with the tag name and the specific attribute
@@ -913,7 +912,7 @@ class APK(object):
                     yield value
 
     def get_attribute_value(
-        self, tag_name, attribute, format_value=False, **attribute_filter
+            self, tag_name, attribute, format_value=False, **attribute_filter
     ):
         """
         Return the attribute value in xml files which matches the tag name and the specific attribute
@@ -987,7 +986,7 @@ class APK(object):
         return [tag for tag_list in all_tags for tag in tag_list]
 
     def find_tags_from_xml(
-        self, xml_name, tag_name, **attribute_filter
+            self, xml_name, tag_name, **attribute_filter
     ):
         """
         Return a list of all the matched tags in a specific xml
@@ -1000,7 +999,7 @@ class APK(object):
             return []
         if xml.tag == tag_name:
             if self.is_tag_matched(
-                xml.tag, **attribute_filter
+                    xml.tag, **attribute_filter
             ):
                 return [xml]
             return []
@@ -1205,7 +1204,7 @@ class APK(object):
                 implied.append([READ_PHONE_STATE, None])
 
         if (WRITE_EXTERNAL_STORAGE in self.permissions or implied_WRITE_EXTERNAL_STORAGE) \
-           and READ_EXTERNAL_STORAGE not in self.permissions:
+                and READ_EXTERNAL_STORAGE not in self.permissions:
             maxSdkVersion = None
             for name, version in self.uses_permissions:
                 if name == WRITE_EXTERNAL_STORAGE:
@@ -1215,10 +1214,10 @@ class APK(object):
 
         if target_sdk_version < 16:
             if READ_CONTACTS in self.permissions \
-               and READ_CALL_LOG not in self.permissions:
+                    and READ_CALL_LOG not in self.permissions:
                 implied.append([READ_CALL_LOG, None])
             if WRITE_CONTACTS in self.permissions \
-               and WRITE_CALL_LOG not in self.permissions:
+                    and WRITE_CALL_LOG not in self.permissions:
                 implied.append([WRITE_CALL_LOG, None])
 
         return implied
@@ -1406,7 +1405,8 @@ class APK(object):
 
         :returns: True if 'android.hardware.touchscreen' is not required, False otherwise
         """
-        return self.get_attribute_value('uses-feature', 'name', required="false", name="android.hardware.touchscreen") == "android.hardware.touchscreen"
+        return self.get_attribute_value('uses-feature', 'name', required="false",
+                                        name="android.hardware.touchscreen") == "android.hardware.touchscreen"
 
     def get_certificate_der(self, filename):
         """
@@ -1560,13 +1560,12 @@ class APK(object):
 
         if not len(digest_bytes):
             return []
-        
+
         digests = []
         block = io.BytesIO(digest_bytes)
 
         data_len = self.read_uint32_le(block)
         while block.tell() < data_len:
-
             algorithm_id = self.read_uint32_le(block)
             digest_len = self.read_uint32_le(block)
             digest = block.read(digest_len)
@@ -1656,7 +1655,6 @@ class APK(object):
         if self._APK_SIG_KEY_V3_SIGNATURE in self._v2_blocks:
             self._is_signed_v3 = True
 
-    
     def parse_v3_signing_block(self):
         """
         Parse the V2 signing block and extract all features
@@ -1706,13 +1704,11 @@ class APK(object):
             raw_digests = signed_data.read(len_digests)
             digests = self.parse_signatures_or_digests(raw_digests)
 
-
             # Certs
             certs = []
             len_certs = self.read_uint32_le(signed_data)
             start_certs = signed_data.tell()
             while signed_data.tell() < start_certs + len_certs:
-
                 len_cert = self.read_uint32_le(signed_data)
                 cert = signed_data.read(len_cert)
                 certs.append(cert)
@@ -1747,7 +1743,7 @@ class APK(object):
             publickey = block.read(len_publickey)
 
             signer = APKV3Signer()
-            signer._bytes = view[off_signer:off_signer+size_signer]
+            signer._bytes = view[off_signer:off_signer + size_signer]
             signer.signed_data = signed_data_object
             signer.signatures = sigs
             signer.public_key = publickey
@@ -1831,7 +1827,7 @@ class APK(object):
             publickey = block.read(len_publickey)
 
             signer = APKV2Signer()
-            signer._bytes = view[off_signer:off_signer+size_signer]
+            signer._bytes = view[off_signer:off_signer + size_signer]
             signer.signed_data = signed_data_object
             signer.signatures = sigs
             signer.public_key = publickey
@@ -1903,14 +1899,14 @@ class APK(object):
         Return a list of :class:`asn1crypto.keys.PublicKeyInfo` which are found
         in the v3 signing block.
         """
-        return [ keys.PublicKeyInfo.load(pkey) for pkey in self.get_public_keys_der_v3()]
+        return [keys.PublicKeyInfo.load(pkey) for pkey in self.get_public_keys_der_v3()]
 
     def get_public_keys_v2(self):
         """
         Return a list of :class:`asn1crypto.keys.PublicKeyInfo` which are found
         in the v2 signing block.
         """
-        return [ keys.PublicKeyInfo.load(pkey) for pkey in self.get_public_keys_der_v2()]
+        return [keys.PublicKeyInfo.load(pkey) for pkey in self.get_public_keys_der_v2()]
 
     def get_certificates_v3(self):
         """
@@ -1919,7 +1915,7 @@ class APK(object):
         Note that we simply extract all certificates regardless of the signer.
         Therefore this is just a list of all certificates found in all signers.
         """
-        return [ x509.Certificate.load(cert) for cert in self.get_certificates_der_v3()]
+        return [x509.Certificate.load(cert) for cert in self.get_certificates_der_v3()]
 
     def get_certificates_v2(self):
         """
@@ -1928,7 +1924,7 @@ class APK(object):
         Note that we simply extract all certificates regardless of the signer.
         Therefore this is just a list of all certificates found in all signers.
         """
-        return [ x509.Certificate.load(cert) for cert in self.get_certificates_der_v2()]
+        return [x509.Certificate.load(cert) for cert in self.get_certificates_der_v2()]
 
     def get_certificates_v1(self):
         """
@@ -2123,6 +2119,7 @@ def get_apkid(apkfile):
     appid = None
     versionCode = None
     versionName = None
+    applicationName = None
     with zipfile.ZipFile(apkfile) as apk:
         with apk.open('AndroidManifest.xml') as manifest:
             axml = AXMLParser(manifest.read())
@@ -2145,10 +2142,15 @@ def get_apkid(apkfile):
                                 versionCode = value
                         elif versionName is None and name == 'versionName':
                             versionName = value
+                        elif applicationName is None and name == 'name':
+                            if axml.name == 'application':
+                                log.warning("find application is {} and name is {}".format(name, value))
+                                # applicationName = value
+                                applicationName = "L" + value.replace(".", "/") + ";"
 
-                    if axml.name == 'manifest':
+                    if axml.name == 'application':
                         break
-                elif _type == END_TAG or _type == TEXT or _type == END_DOCUMENT:
+                elif _type == END_DOCUMENT:
                     raise RuntimeError('{path}: <manifest> must be the first element in AndroidManifest.xml'
                                        .format(path=apkfile))
 
@@ -2158,5 +2160,38 @@ def get_apkid(apkfile):
     if not versionName:
         versionName = ''  # versionName is expected to always be a str
 
-    return appid, versionCode, versionName.strip('\0')
+    return appid, versionCode, versionName.strip('\0'), applicationName.strip('\0')
 
+
+def get_application(xmlfile):
+    if not os.path.exists(xmlfile):
+        log.error("'{xmlfile}' does not exist!".format(xmlfile=xmlfile))
+
+    applicationName = None
+    with open(xmlfile) as manifest:
+        txml = AXMLParser(manifest.read())
+        count = 0
+        while txml.is_valid():
+            _type = next(txml)
+            count += 1
+            if _type == START_TAG:
+                for i in range(0, txml.getAttributeCount()):
+                    name = txml.getAttributeName(i)
+                    _type = txml.getAttributeValueType(i)
+                    _data = txml.getAttributeValueData(i)
+                    value = format_value(_type, _data, lambda _: txml.getAttributeValue(i))
+                    if applicationName is None and name == 'android:name':
+                        if txml.name == 'application':
+                            log.warning("find application is {} and name is {}".format(name, value))
+                            applicationName = value
+
+                if txml.name == 'manifest':
+                    break
+            elif _type == END_TAG or _type == TEXT or _type == END_DOCUMENT:
+                raise RuntimeError('{path}: <manifest> must be the first element in AndroidManifest.xml'
+                                   .format(path=xmlfile))
+
+    if applicationName:
+        return applicationName.strip('\0')
+    else:
+        return ""

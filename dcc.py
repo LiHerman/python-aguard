@@ -17,24 +17,32 @@ from androguard.core.bytecodes import apk, dvm
 from androguard.util import read
 from dex2c.compiler import Dex2C
 from dex2c.util import JniLongName, get_method_triple, get_access_method, is_synthetic_method, is_native_method
+from dex2c.insert_smali import whole_clinit, insert_clinit
+# 3rd party modules
+from lxml import etree
+
 
 APKTOOL = 'tools/apktool.jar'
 SIGNJAR = 'tools/signapk.jar'
 NDKBUILD = 'ndk-build'
 LIBNATIVECODE = 'libnc.so'
+ADD_SO = False
 
 logger = logging.getLogger('dcc')
 
 tempfiles = []
 
+
 def is_windows():
     return os.name == 'nt'
+
 
 def cpu_count():
     num_processes = os.cpu_count()
     if num_processes is None:
         num_processes = 2
     return num_processes
+
 
 def make_temp_dir(prefix='dcc'):
     global tempfiles
@@ -306,6 +314,41 @@ def native_class_methods(smali_path, compiled_methods):
     with open(smali_path, 'w') as fp:
         fp.writelines(code_lines)
 
+def add_load_so(smali_path, hasClinit):
+    def handle_clinit(code_lines):
+        while True:
+            line = fp.readline()
+            if not line:
+                break
+            code_lines.append(line)
+            s = line.strip()
+            if s.startswith('.locals'):
+                logger.warning("insert_clinit insert: %s" % (insert_clinit[0]))
+                code_lines.append(insert_clinit[0])
+                break
+
+    code_lines = []
+    with open(smali_path, 'r') as fp:
+        while True:
+            line = fp.readline()
+            if not line:
+                break
+            code_lines.append(line)
+            line = line.strip()
+            if not hasClinit and line.startswith('# direct methods'):
+                # 没有clinit方法
+                logger.warning("whole_clinit insert: %s" % (whole_clinit[0]))
+                code_lines.append(whole_clinit[0])
+            elif hasClinit and line.startswith('.method'):
+                current_method = line.split(' ')[-1]
+                param = current_method.find('(')
+                name = current_method[:param]
+                logger.warning("hasClinit name  %s" % (name))
+                if name == '<clinit>':
+                    handle_clinit(code_lines)
+
+    with open(smali_path, 'w') as fp:
+        fp.writelines(code_lines)
 
 def native_compiled_dexes(decompiled_dir, compiled_methods):
     # smali smali_classes2 smali_classes3 ...
@@ -354,6 +397,7 @@ def compile_dex(vm, filtercfg):
 
     compiled_method_code = {}
     errors = []
+    application_class = vmx.application
 
     for m in vm.get_methods():
         method_triple = get_method_triple(m)
@@ -377,30 +421,35 @@ def compile_dex(vm, filtercfg):
             if code:
                 compiled_method_code[method_triple] = code
 
-    return compiled_method_code, errors
+    return compiled_method_code, errors, application_class
+
 
 def compile_all_dex(apkfile, filtercfg):
     vms = auto_vms(apkfile)
 
     compiled_method_code = {}
     compile_error_msg = []
-
+    application_class = {}
+    # vm is DalvikVMFormat，class.dex在内存中的映射
     for vm in vms:
-        codes, errors = compile_dex(vm, filtercfg)
+        codes, errors, application = compile_dex(vm, filtercfg)
         compiled_method_code.update(codes)
         compile_error_msg.extend(errors)
+        application_class.update(application)
 
-    return compiled_method_code, compile_error_msg
+    return compiled_method_code, compile_error_msg, application_class
+
 
 def is_apk(name):
     return name.endswith('.apk')
+
 
 def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, source_archive='project-source.zip'):
     if not os.path.exists(apkfile):
         logger.error("file %s is not exists", apkfile)
         return
 
-    compiled_methods, errors = compile_all_dex(apkfile, filtercfg)
+    compiled_methods, errors, application_name = compile_all_dex(apkfile, filtercfg)
 
     if errors:
         logger.warning('================================')
@@ -428,10 +477,41 @@ def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, sour
 
     if is_apk(apkfile) and outapk:
         decompiled_dir = ApkTool.decompile(apkfile)
+        logger.warning("decompiled_dir is %s", decompiled_dir)
+        if ADD_SO:
+            insert_smali(apkfile, application_name, decompiled_dir)
         native_compiled_dexes(decompiled_dir, compiled_methods)
         copy_compiled_libs(project_dir, decompiled_dir)
         unsigned_apk = ApkTool.compile(decompiled_dir)
         sign(unsigned_apk, outapk)
+
+# 在application中添加 load so
+def insert_smali(apkfile, applications, decompiled_dir):
+    appName = None
+    hasClinit = False
+    for app in applications.keys():
+        appName = app
+        hasClinit = applications[appName] != ''
+        break
+
+    if len(appName) < 1:
+        logger.error("application name can't find")
+        return
+    # find application name from AndroidMainfest.xml
+    appNameFromXml = apk.get_apkid(apkfile)
+    tappName = appNameFromXml[3]
+    logger.warning("appNameFromXml is %s", tappName)
+    # 插入语句
+    classes_output = list(filter(lambda x: x.find('smali') >= 0, os.listdir(decompiled_dir)))
+    todo = None
+    for classes in classes_output:
+        cls_name = appName[1:-1].rstrip(';')
+        smali_path = os.path.join(decompiled_dir, classes, cls_name) + '.smali'
+        if os.path.exists(smali_path):
+            todo = smali_path
+            logger.warning("smali_path is %s", todo)
+            break
+    add_load_so(todo, hasClinit)
 
 
 sys.setrecursionlimit(5000)
@@ -446,6 +526,7 @@ if __name__ == '__main__':
     parser.add_argument('--no-build', action='store_true', default=False, help='Do not build the compiled code')
     parser.add_argument('--source-dir', help='The compiled cpp code output directory.')
     parser.add_argument('--project-archive', default='project-source.zip', help='Archive the project directory')
+    parser.add_argument('--add_so', action='store_true', default=False, help='load so in application class auto')
 
     args = vars(parser.parse_args())
     infile = args['infile']
@@ -454,6 +535,7 @@ if __name__ == '__main__':
     filtercfg = args['filter']
     do_compile = not args['no_build']
     source_archive = args['project_archive']
+    ADD_SO = args['add_so']
 
     if args['source_dir']:
         project_dir = args['source_dir']
@@ -480,4 +562,3 @@ if __name__ == '__main__':
         logger.error("Compile %s failed!" % infile, exc_info=True)
     finally:
         clean_temp_files()
-

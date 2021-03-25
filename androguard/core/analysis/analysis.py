@@ -1089,6 +1089,8 @@ class Analysis:
         self.strings = {}
         # A dict of {EncodedMethod: MethodAnalysis}, populated on add(vm)
         self.methods = {}
+        # A Application for smali inject
+        self.application = {}
 
         if vm:
             self.add(vm)
@@ -1099,12 +1101,24 @@ class Analysis:
 
         :param vm: :class:`dvm.DalvikVMFormat` to add to this Analysis
         """
+        isApplicationAdd = False
         self.vms.append(vm)
         for current_class in vm.get_classes():
-            self.classes[current_class.get_name()] = ClassAnalysis(current_class)
-
+            csa = ClassAnalysis(current_class)
+            self.classes[current_class.get_name()] = csa
+            if csa.extends == "Landroid/app/Application;" or csa.name == "Landroid/app/Application;" :
+                log.warning("application set by {} its extend class name is {} ".format(csa.name, csa.extends))
+                isApplicationAdd = True
+                self.application[current_class.get_name()] = ''
+        # method is EncodedMethod
         for method in vm.get_methods():
             self.methods[method] = MethodAnalysis(vm, method)
+            # if(isApplicationAdd):
+            #     log.warning("method {} name  {}".format(method.get_class_name(), method.get_name()))
+            # 如果已查到Application入口，再检查是否有clinit方法，方便之后做smali插入
+            if isApplicationAdd and method.get_name() == "<clinit>" and method.get_class_name() in self.application.keys():
+                log.warning("application {} include  {}".format(method.get_class_name() , method.get_name()))
+                self.application[method.get_class_name()] = method.get_name
 
     def _get_all_classes(self):
         """
