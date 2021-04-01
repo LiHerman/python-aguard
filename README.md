@@ -53,10 +53,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Dex2C {}
+public @interface Protect2C {}
 ```
 
-然后使用Dex2C标记需要编译的类或者方法
+然后使用Project2C标记需要编译的类或者方法
 
 ### 3. 加固APP
 使用如下命令加固your_app.apk

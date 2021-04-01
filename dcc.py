@@ -184,7 +184,7 @@ class MethodFilter(object):
                     annotation_item = vm.CM.get_obj_by_offset(aoffitem.get_annotation_off())
                     encoded_annotation = annotation_item.get_annotation()
                     type_desc = vm.CM.get_type(encoded_annotation.get_type_idx())
-                    if type_desc.endswith('Dex2C;'):
+                    if type_desc.endswith('Protect2C;'):
                         annotated_class = True
                         for method in c.get_methods():
                             self._add_annotation_method(method)
@@ -199,7 +199,7 @@ class MethodFilter(object):
                         annotation_item = vm.CM.get_obj_by_offset(aoffitem.get_annotation_off())
                         encoded_annotation = annotation_item.get_annotation()
                         type_desc = vm.CM.get_type(encoded_annotation.get_type_idx())
-                        if type_desc.endswith('Dex2C;'):
+                        if type_desc.endswith('Protect2C;'):
                             self._add_annotation_method(method)
 
     def should_compile(self, method):
@@ -284,7 +284,7 @@ def native_class_methods(smali_path, compiled_methods):
             s = line.strip()
             if s == '.end method':
                 break
-            elif s.startswith('.annotation runtime') and s.find('Dex2C') < 0:
+            elif s.startswith('.annotation runtime') and s.find('Protect2C') < 0:
                 code_lines.append(line)
                 handle_annotanion()
             else:
