@@ -438,6 +438,8 @@ class HeaderItem(object):
         self.file_size = unpack("=I", buff.read(4))[0]
         self.header_size = unpack("=I", buff.read(4))[0]
         self.endian_tag = unpack("=I", buff.read(4))[0]
+        log.warning("before endian_tag 0x%x" % self.endian_tag)
+        self.endian_tag = 0X12345678
         self.link_size = unpack("=I", buff.read(4))[0]
         self.link_off = unpack("=I", buff.read(4))[0]
         self.map_off = unpack("=I", buff.read(4))[0]
@@ -7869,6 +7871,7 @@ class DalvikVMFormat(bytecode.BuffHandle):
             last_idx = idx + s[idx]
 
         log.debug("GLOBAL SIZE %d" % len(buff))
+        log.warning("after endian_tag 0x%x" % self.endian_tag)
 
         return self.fix_checksums(buff)
 

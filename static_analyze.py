@@ -444,50 +444,64 @@ def compile_all_dex(apkfile, filtercfg):
 def is_apk(name):
     return name.endswith('.apk')
 
+#getStringArray for dex
+# def getStringArray(res):
+#     res.get
+
 
 def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, source_archive='project-source.zip'):
     if not os.path.exists(apkfile):
         logger.error("file %s is not exists", apkfile)
         return
 
-    compiled_methods, errors, application_name = compile_all_dex(apkfile, filtercfg)
+    #解析res文件
+    target = apk.APK(apkfile)
+    res = target.get_android_resources()
+    for package_name in res.get_packages_names():
+        # stringRes = res.get_string_resources(package_name)
+        # stringRes = res.get_items(package_name)
+        stringRes = res.get_public_resources(package_name)
+        res.get_res_id_by_key()
+        logger.warning("[%s] stringRes is %s \n", package_name, stringRes)
 
-    if errors:
-        logger.warning('================================')
-        logger.warning('\n'.join(errors))
-        logger.warning('================================')
-
-    if len(compiled_methods) == 0:
-        logger.info("no compiled methods")
-        return
-
-    if project_dir:
-        if not os.path.exists(project_dir):
-            shutil.copytree('project', project_dir)
-        write_compiled_methods(project_dir, compiled_methods)
-    else:
-        project_dir = make_temp_dir('dcc-project-')
-        shutil.rmtree(project_dir)
-        shutil.copytree('project', project_dir)
-        write_compiled_methods(project_dir, compiled_methods)
-        src_zip = archive_compiled_code(project_dir)
-        shutil.move(src_zip, source_archive)
-
-    if do_compile:
-        build_project(project_dir)
-
-    if is_apk(apkfile) and outapk:
-        decompiled_dir = ApkTool.decompile(apkfile)
-        logger.warning("decompiled_dir is %s", decompiled_dir)
-        if ADD_SO:
-            insert_smali(apkfile, application_name, decompiled_dir)
-        native_compiled_dexes(decompiled_dir, compiled_methods)
-        copy_compiled_libs(project_dir, decompiled_dir)
-        unsigned_apk = ApkTool.compile(decompiled_dir)
-        if do_sign:
-            sign(unsigned_apk, outapk)
-        else:
-            shutil.copyfile(unsigned_apk, outapk)
+    # compiled_methods, errors, application_name = compile_all_dex(apkfile, filtercfg)
+    #
+    # if errors:
+    #     logger.warning('================================')
+    #     logger.warning('\n'.join(errors))
+    #     logger.warning('================================')
+    #
+    # if len(compiled_methods) == 0:
+    #     logger.info("no compiled methods")
+    #     return
+    #
+    # if project_dir:
+    #     if not os.path.exists(project_dir):
+    #         shutil.copytree('project', project_dir)
+    #     write_compiled_methods(project_dir, compiled_methods)
+    # else:
+    #     project_dir = make_temp_dir('dcc-project-')
+    #     shutil.rmtree(project_dir)
+    #     shutil.copytree('project', project_dir)
+    #     write_compiled_methods(project_dir, compiled_methods)
+    #     src_zip = archive_compiled_code(project_dir)
+    #     shutil.move(src_zip, source_archive)
+    #
+    # if do_compile:
+    #     build_project(project_dir)
+    #
+    # if is_apk(apkfile) and outapk:
+    #     decompiled_dir = ApkTool.decompile(apkfile)
+    #     logger.warning("decompiled_dir is %s", decompiled_dir)
+    #     if ADD_SO:
+    #         insert_smali(apkfile, application_name, decompiled_dir)
+    #     native_compiled_dexes(decompiled_dir, compiled_methods)
+    #     copy_compiled_libs(project_dir, decompiled_dir)
+    #     unsigned_apk = ApkTool.compile(decompiled_dir)
+    #     if do_sign:
+    #         sign(unsigned_apk, outapk)
+    #     else:
+    #         shutil.copyfile(unsigned_apk, outapk)
 
 # 在application中添加 load so
 def insert_smali(apkfile, applications, decompiled_dir):

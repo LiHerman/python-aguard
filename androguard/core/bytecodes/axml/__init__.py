@@ -1422,6 +1422,9 @@ class ARSCParser(object):
                                     c_value["dimen"].append(
                                         self.get_resource_dimen(ate))
 
+                                # elif a_res_type.get_type() == "array":
+                                #     c_value["array"].append(
+                                #         self.get_items())
                                 nb_i += 1
                         nb += 3 + nb_i - 1  # -1 to account for the nb+=1 on the next line
                 nb += 1
@@ -1551,6 +1554,8 @@ class ARSCParser(object):
                 else:
                     value = i[1]
                 buff += '<string name="%s">%s</string>\n' % (i[0], value)
+            for i in self.values[package_name][locale]["array"]:
+                buff += '<string array="%s">%s</string>\n' % (i[0], value)
         except KeyError:
             pass
 
