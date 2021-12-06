@@ -20,6 +20,8 @@ import re
 import sys
 import binascii
 
+from dcc import logger
+
 log = logging.getLogger("androguard.axml")
 
 # Constants for ARSC Files
@@ -1600,7 +1602,7 @@ class ARSCParser(object):
         self._analyse()
 
         buff = 'match all %s String list:\n' % prefix
-
+        logger.warning('match all %s String list:' % prefix)
         try:
             for i in self.values[package_name][locale]["string"]:
                 if any(map(i[1].__contains__, '<&>')):
@@ -1613,7 +1615,8 @@ class ARSCParser(object):
                         matchPrx = True
                         break
                 if matchPrx:
-                    buff += '<string name="%s">%s</string>"""' % (i[0], value)
+                    buff += '<string name="%s">%s</string>' % (i[0], value)
+                    logger.warning('<string name="%s">%s</string>' % (i[0], value))
         except KeyError:
             pass
 

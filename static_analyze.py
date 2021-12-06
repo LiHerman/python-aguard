@@ -471,8 +471,10 @@ def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, sour
     if not os.path.exists(apkfile):
         logger.error("file %s is not exists", apkfile)
         return
-    prefix = ["http:", "https:", "www"]
+    # prefix = ["http:", "https:", "www"]
+    prefix = ["http", "www"]
     parseStringWithPre(apkfile, prefix)
+
 
     # if errors:
     #     logger.warning('================================')
@@ -513,17 +515,29 @@ def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, sour
 
 
 def parseStringWithPre(apkfile, prefix):
+    logger.error("==============%s apk包字符串%s匹配检查 start ================", apkfile, prefix)
     # 解析res文件
     target = apk.APK(apkfile)
+    target.get_file()
     res = target.get_android_resources()
     for package_name in res.get_packages_names():
-        # stringRes = res.get_string_resources(package_name)
-        # stringRes = res.get_items(package_name)
-        stringRes = res.get_string_resourcesWithPrefix(package_name, '\x00\x00', prefix)
         getStringArray(res, package_name, "array", prefix)
-        logger.warning("[%s]  %s \n", package_name, stringRes)
+        stringRes = res.get_string_resourcesWithPrefix(package_name, '\x00\x00', prefix)
+        # logger.warning("[%s]  %s \n", package_name, stringRes)
     # 解析dex中的字符串
     matchStringFromDex(apkfile, prefix)
+    logger.error("==============%s apk包字符串%s匹配检查 end ================", apkfile, prefix)
+    # 检查权限
+    permissions = target.get_permissions()
+    index = 0
+    for permission in permissions:
+        index += 1
+        logger.warning("permission[%s] = [%s]", index, permission)
+    index = 0
+    permissionDs = target.get_declared_permissions()
+    for permissiond in permissionDs:
+        index += 1
+        logger.warning("declared_permissions[%s]=[%s] ", index, permissiond)
 
 
 # 在application中添加 load so
