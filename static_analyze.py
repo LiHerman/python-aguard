@@ -424,48 +424,56 @@ def compile_dex(vm, filtercfg):
     return compiled_method_code, errors, application_class
 
 
-def compile_all_dex(apkfile, filtercfg):
+def matchStringFromDex(apkfile, prefix):
     vms = auto_vms(apkfile)
 
-    compiled_method_code = {}
-    compile_error_msg = []
-    application_class = {}
+    # compiled_method_code = {}
+    # compile_error_msg = []
+    # application_class = {}
     # vm is DalvikVMFormat，class.dex在内存中的映射
     for vm in vms:
-        codes, errors, application = compile_dex(vm, filtercfg)
-        compiled_method_code.update(codes)
-        compile_error_msg.extend(errors)
-        application_class.update(application)
-
-
-    return compiled_method_code, compile_error_msg, application_class
-
+        straits = vm.get_prefix_strings(prefix)
+        for strait in straits:
+            logger.warning("dex match %s is %s", prefix, strait);
+        # codes, errors, application = compile_dex(vm, filtercfg)
+        # compiled_method_code.update(codes)
+        # compile_error_msg.extend(errors)
+        # application_class.update(application)
 
 def is_apk(name):
     return name.endswith('.apk')
 
-#getStringArray for dex
-# def getStringArray(res):
-#     res.get
+
+# getStringArray for dex
+def getStringArray(res, package_name, resource_type, prefix):
+    logger.warning("-----%s array get start-----：", package_name)
+    arrayKeys = res.get_res_id_by_type(package_name, resource_type)
+    for key in arrayKeys:
+        keyid = res.get_res_id_by_key(package_name, resource_type, key)
+        values = res.get_resolved_res_configs(keyid)
+        for value in values:
+            stirs = value[1]
+            index = 0
+            for stir in stirs:
+                matchPrx = False
+                for prefix_ in prefix:
+                    if stir.startswith(prefix_):
+                        matchPrx = True
+                        break
+                if matchPrx:
+                    logger.warning("%s[%s]=[%s]",  key, index, stir)
+                index += 1
+    logger.warning("-----%s array get end-----：", package_name)
+    return None
 
 
 def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, source_archive='project-source.zip'):
     if not os.path.exists(apkfile):
         logger.error("file %s is not exists", apkfile)
         return
+    prefix = ["http:", "https:", "www"]
+    parseStringWithPre(apkfile, prefix)
 
-    #解析res文件
-    target = apk.APK(apkfile)
-    res = target.get_android_resources()
-    for package_name in res.get_packages_names():
-        # stringRes = res.get_string_resources(package_name)
-        # stringRes = res.get_items(package_name)
-        stringRes = res.get_public_resources(package_name)
-        res.get_res_id_by_key()
-        logger.warning("[%s] stringRes is %s \n", package_name, stringRes)
-
-    # compiled_methods, errors, application_name = compile_all_dex(apkfile, filtercfg)
-    #
     # if errors:
     #     logger.warning('================================')
     #     logger.warning('\n'.join(errors))
@@ -502,6 +510,21 @@ def dcc_main(apkfile, filtercfg, outapk, do_compile=True, project_dir=None, sour
     #         sign(unsigned_apk, outapk)
     #     else:
     #         shutil.copyfile(unsigned_apk, outapk)
+
+
+def parseStringWithPre(apkfile, prefix):
+    # 解析res文件
+    target = apk.APK(apkfile)
+    res = target.get_android_resources()
+    for package_name in res.get_packages_names():
+        # stringRes = res.get_string_resources(package_name)
+        # stringRes = res.get_items(package_name)
+        stringRes = res.get_string_resourcesWithPrefix(package_name, '\x00\x00', prefix)
+        getStringArray(res, package_name, "array", prefix)
+        logger.warning("[%s]  %s \n", package_name, stringRes)
+    # 解析dex中的字符串
+    matchStringFromDex(apkfile, prefix)
+
 
 # 在application中添加 load so
 def insert_smali(apkfile, applications, decompiled_dir):

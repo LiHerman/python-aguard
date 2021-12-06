@@ -438,7 +438,7 @@ class HeaderItem(object):
         self.file_size = unpack("=I", buff.read(4))[0]
         self.header_size = unpack("=I", buff.read(4))[0]
         self.endian_tag = unpack("=I", buff.read(4))[0]
-        log.warning("before endian_tag 0x%x" % self.endian_tag)
+        # log.warning("before endian_tag 0x%x" % self.endian_tag)
         self.endian_tag = 0X12345678
         self.link_size = unpack("=I", buff.read(4))[0]
         self.link_off = unpack("=I", buff.read(4))[0]
@@ -8211,6 +8211,28 @@ class DalvikVMFormat(bytecode.BuffHandle):
             return None
         for i in self.get_strings():
             if re.match(regular_expressions, i):
+                str_list.append(i)
+        return str_list
+
+    def get_prefix_strings(self, prefix):
+        """
+        Return all target strings matched the regex
+
+        :param regular_expressions: the python regex
+        :type regular_expressions: string
+
+        :rtype: a list of strings matching the regex expression
+        """
+        str_list = []
+        if len(prefix) == 0:
+            return None
+        for i in self.get_strings():
+            matchPrx = False
+            for prefix_ in prefix:
+                if re.match(prefix_, i):
+                    matchPrx = True
+                    break
+            if matchPrx:
                 str_list.append(i)
         return str_list
 
